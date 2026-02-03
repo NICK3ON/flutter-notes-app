@@ -1,47 +1,68 @@
+import 'package:flutter/material.dart';
 import '../db/database_helper.dart';
 import '../api/note_api.dart';
+import 'notification_service.dart';
 
 class SyncService {
 
-  // 🔹 PUSH: local → server
+  // PUSH: local → server
   static Future<void> pushSync() async {
     print("PUSH SYNC STARTED");
 
-    final db = DatabaseHelper.instance;
-    final unsyncedNotes = await db.getUnsyncedNotes();
+    try {
+      final db = DatabaseHelper.instance;
+      final unsyncedNotes = await db.getUnsyncedNotes();
 
-    print("UNSYNCED NOTES: $unsyncedNotes");
+      print("UNSYNCED NOTES: $unsyncedNotes");
 
-    for (var note in unsyncedNotes) {
-      final success = await ApiService.sendNote(note);
+      for (var note in unsyncedNotes) {
+        final success = await ApiService.sendNote(note);
 
-      if (success) {
-        await db.markAsSynced(note['id'], note['id']); // temp mapping
-        print("Note pushed: ${note['title']}");
+        if (success) {
+          await db.markAsSynced(note['id'], note['id']); // temp mapping
+          print("Note pushed: ${note['title']}");
+          
+          // Show notification for synced note
+          await NotificationService().showNoteSyncedNotification();
+        }
       }
+    } catch (e) {
+      debugPrint('Push sync error: $e');
+      await NotificationService().showSyncErrorNotification();
     }
   }
 
-  // 🔹 PULL: server → local
+  // PULL: server → local
   static Future<void> pullSync() async {
     print("PULL SYNC STARTED");
 
-    final serverNotes = await ApiService.fetchNotes();
-    final db = DatabaseHelper.instance;
-    final localServerIds = await db.getLocalServerIds();
+    try {
+      final serverNotes = await ApiService.fetchNotes();
+      final db = DatabaseHelper.instance;
+      final localServerIds = await db.getLocalServerIds();
 
-    for (var note in serverNotes) {
-      if (!localServerIds.contains(note['id'])) {
-        await db.insertServerNote(note);
-        print("Note pulled: ${note['title']}");
+      for (var note in serverNotes) {
+        if (!localServerIds.contains(note['id'])) {
+          await db.insertServerNote(note);
+          print("Note pulled: ${note['title']}");
+        }
       }
+
+      // Show backup success notification after pulling notes
+      if (serverNotes.isNotEmpty) {
+        await NotificationService().showBackupSuccessNotification();
+      }
+    } catch (e) {
+      debugPrint('Pull sync error: $e');
+      await NotificationService().showSyncErrorNotification();
     }
   }
 
-  // 🔹 ONE BUTTON SYNC
+  // ONE BUTTON SYNC
   static Future<void> syncAll() async {
     await pushSync();
     await pullSync();
     print("SYNC COMPLETE");
   }
 }
+
