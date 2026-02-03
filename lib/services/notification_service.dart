@@ -16,13 +16,11 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
-    // Request permissions for iOS
+    // Request permissions for Android
     await _firebaseMessaging.requestPermission(
       alert: true,
       announcement: true,
       badge: true,
-      carryForward: true,
-      criticalAlert: true,
       provisional: false,
       sound: true,
     );
@@ -31,24 +29,15 @@ class NotificationService {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
-      defaultPresentSound: true,
-      defaultPresentAlert: true,
-      defaultPresentBadge: true,
-    );
-
     const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
-      iOS: iosSettings,
     );
 
     await _localNotifications.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        debugPrint('Notification tapped: ${response.payload}');
+      },
     );
 
     // Handle foreground messages
@@ -99,15 +88,8 @@ class NotificationService {
       showWhen: true,
     );
 
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
     const NotificationDetails notificationDetails = NotificationDetails(
       android: androidDetails,
-      iOS: iosDetails,
     );
 
     await _localNotifications.show(
