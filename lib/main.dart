@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_application_1/DB/database_helper.dart';
 import 'package:flutter_application_1/services/sync_service.dart';
 import 'package:flutter_application_1/services/notification_service.dart';
+import 'package:flutter_application_1/sync_meta.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,11 +45,15 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final dbHelper = DatabaseHelper.instance;
   List<Map<String, dynamic>> notes = [];
+  String? lastSync;
+
 
   @override
   void initState() {
     super.initState();
     loadNotes();
+    loadLastSync();
+
   }
 
   void loadNotes() async {
@@ -64,6 +69,13 @@ class _MyHomePageState extends State<MyHomePage> {
     await SyncService.pullSync();
     loadNotes(); // refresh UI after sync
   }
+  void loadLastSync() async {
+  final time = await SyncMeta.getLastSyncTime();
+  setState(() {
+    lastSync = time;
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +90,16 @@ class _MyHomePageState extends State<MyHomePage> {
           return ListTile(
             title: Text(notes[index]['title']),
             subtitle: Text(notes[index]['content']),
-          );
+            trailing: Icon(
+              notes[index]['is_synced'] == 1
+              ? Icons.cloud_done
+              : Icons.cloud_off,
+            color: notes[index]['is_synced'] == 1
+              ? Colors.green
+              : Colors.orange,
+            ),
+        );
+
         },
       ),
       floatingActionButton: Column(

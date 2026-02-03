@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../db/database_helper.dart';
 import '../api/note_api.dart';
 import 'notification_service.dart';
+import '../sync_meta.dart';
+
+
+
 
 class SyncService {
 
@@ -57,12 +61,23 @@ class SyncService {
       await NotificationService().showSyncErrorNotification();
     }
   }
+  
 
   // ONE BUTTON SYNC
-  static Future<void> syncAll() async {
+ // ONE BUTTON SYNC
+static Future<void> syncAll() async {
+  try {
     await pushSync();
     await pullSync();
+
+    // ✅ Save last successful sync time
+    await SyncMeta.saveSyncTime();
+
     print("SYNC COMPLETE");
+  } catch (e) {
+    debugPrint('Full sync failed: $e');
   }
+}
+
 }
 
